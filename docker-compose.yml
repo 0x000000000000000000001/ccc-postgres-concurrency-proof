@@ -1,19 +1,69 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: concurrency_proof
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=concurrency_proof
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=1000"
+      - "-c"
+      - "shared_buffers=2GB"
+      - "-c"
+      - "wal_level=logical"
+    ulimits:
+      nofile:
+        soft: 520000
+        hard: 520000
     ports:
-      - "54329:5432"
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d concurrency_proof"]
-      interval: 1s
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
       timeout: 5s
       retries: 30
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
+  pgbouncer-tx:
+    image: edoburu/pgbouncer:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/concurrency_proof
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=65000
+      - DEFAULT_POOL_SIZE=300
+      - MIN_POOL_SIZE=100
+      - SERVER_RESET_QUERY=DISCARD ALL
+      - AUTH_TYPE=scram-sha-256
+    ulimits:
+      nofile:
+        soft: 520000
+        hard: 520000
+    ports:
+      - "6432:5432"
+    depends_on:
+      - postgres
+
+  pgbouncer-lock:
+    image: edoburu/pgbouncer:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/concurrency_proof
+      - POOL_MODE=session
+      - MAX_CLIENT_CONN=65000
+      - DEFAULT_POOL_SIZE=100
+      - MIN_POOL_SIZE=50
+      - SERVER_RESET_QUERY=DISCARD ALL
+      - AUTH_TYPE=scram-sha-256
+    ulimits:
+      nofile:
+        soft: 520000
+        hard: 520000
+    ports:
+      - "6433:5432"
+    depends_on:
+      - postgres
 
 volumes:
   postgres-data:
