@@ -1,5 +1,7 @@
 # PostgreSQL Concurrency Proof
 
+Article: [Event Sourcing Under Concurrent Writes](https://blog.ricofritzsche.de/event-sourcing-under-concurrent-writes-89396e373b71?sk=deef16bcee428953a52f6fb2b3b2e500)
+
 This repository is an executable PostgreSQL proof for two claims from “Event Sourcing Under Concurrent Writes.” It does not assume the article is right: the integration tests either prove or falsify the relevant behavior against a real PostgreSQL server.
 
 The domain example is deliberately tiny: one `UserRegistered` event with a JSON payload such as `{"username":"alice"}`. The command context is all `UserRegistered` events whose payload contains that username, and the context version is `COALESCE(MAX(sequence_number), 0)`.
